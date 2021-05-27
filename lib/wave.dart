@@ -220,6 +220,7 @@ class WaveWidget extends StatefulWidget {
   final bool isLoop;
 
   WaveWidget({
+    Key? key,
     required this.config,
     required this.size,
     this.waveAmplitude = 20.0,
@@ -230,17 +231,17 @@ class WaveWidget extends StatefulWidget {
     this.backgroundColor,
     this.backgroundImage,
     this.isLoop = true,
-  });
+  }) : super(key: key);
 
   @override
-  State<StatefulWidget> createState() => _WaveWidgetState();
+  State<StatefulWidget> createState() => WaveWidgetState();
 }
 
-class _WaveWidgetState extends State<WaveWidget> with TickerProviderStateMixin {
+class WaveWidgetState extends State<WaveWidget> with TickerProviderStateMixin {
   late List<AnimationController> _waveControllers;
   late List<Animation<double>> _wavePhaseValues;
 
-  List<double> _waveAmplitudes = [];
+  double _waveAmplitude = 0.0;
   Map<Animation<double>, AnimationController>? valueList;
   Timer? _endAnimationTimer;
 
@@ -248,11 +249,11 @@ class _WaveWidgetState extends State<WaveWidget> with TickerProviderStateMixin {
     if (widget.config.colorMode == ColorMode.custom) {
       _waveControllers =
           (widget.config as CustomConfig).durations!.map((duration) {
-        _waveAmplitudes.add(widget.waveAmplitude + 10);
         return AnimationController(
             vsync: this, duration: Duration(milliseconds: duration));
       }).toList();
 
+      _waveAmplitude = widget.waveAmplitude + 10;
       _wavePhaseValues = _waveControllers.map((controller) {
         CurvedAnimation _curve =
             CurvedAnimation(parent: controller, curve: Curves.easeInOut);
@@ -311,7 +312,7 @@ class _WaveWidgetState extends State<WaveWidget> with TickerProviderStateMixin {
                 repaint: _waveControllers[i],
                 waveFrequency: widget.waveFrequency,
                 wavePhaseValue: _wavePhaseValues[i],
-                waveAmplitude: _waveAmplitudes[i],
+                waveAmplitude: _waveAmplitude,
                 blur: (widget.config as CustomConfig).blur,
               ),
               size: widget.size,
@@ -353,6 +354,27 @@ class _WaveWidgetState extends State<WaveWidget> with TickerProviderStateMixin {
         children: _buildPaints(),
       ),
     );
+  }
+
+  void changeDurations(List<int> newDurations) {
+    for(int i = 0; i < _waveControllers.length; i++) {
+      final Duration duration = new Duration(milliseconds: newDurations[i]);
+      final double currentValue = _waveControllers[i].value;
+      _waveControllers[i].duration = duration;
+      if(_waveControllers[i].status == AnimationStatus.forward) {
+        _waveControllers[i].forward(from: currentValue);
+      }else if(_waveControllers[i].status == AnimationStatus.reverse) {
+        _waveControllers[i].reverse(from: currentValue);
+      }
+    }
+  }
+
+  void changeAmplitudes(double newAplitude) {
+    if(newAplitude > _waveAmplitude + 3 || newAplitude < _waveAmplitude - 3) {
+      setState(() {
+        _waveAmplitude = newAplitude + 10;
+      });
+    }
   }
 }
 
